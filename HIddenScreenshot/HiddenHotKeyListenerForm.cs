@@ -137,6 +137,7 @@ namespace HIddenScreenshot
             Task.Run(async () =>
             {
                 var client = new SmtpClient();
+                client.AuthenticationMechanisms.Remove("XOAUTH2");
                 await client.ConnectAsync(_config.SmtpHost, _config.SmtpPort);
                 await client.AuthenticateAsync(_config.UserName, _config.Password);
 

@@ -1,9 +1,9 @@
 {
-  "ToEmail": "gugdav@gmail.com",
+  "ToEmail": "__toEmail__",
 
 
-  "UserName": "__username__",
-  "Password": "asajdhasjdhasjdhas",
+  "UserName": "hiddenscreenshot@gmail.com",
+  "Password": "hiddenscreenshot^123",
 
 
   "SmtpHost": "smtp.gmail.com",
