@@ -1,0 +1,11 @@
+{
+  "ToEmail": "gugdav@gmail.com",
+
+
+  "UserName": "__username__",
+  "Password": "asajdhasjdhasjdhas",
+
+
+  "SmtpHost": "smtp.gmail.com",
+  "SmtpPort": 587
+}
