@@ -1,6 +1,7 @@
-﻿using System;
+﻿using MailKit.Net.Smtp;
+using MimeKit;
+using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -107,12 +108,12 @@ namespace HIddenScreenshot
             {
                 var id = m.WParam.ToInt32();
 
-                if (id == (int) Hotkeys.Quit)
+                if (id == (int)Hotkeys.Quit)
                 {
                     Environment.Exit(1);
                 }
 
-                if (id == (int) Hotkeys.MakeScreenshot)
+                if (id == (int)Hotkeys.MakeScreenshot)
                 {
                     MakeAndSendScreenshot();
                 }
@@ -123,19 +124,33 @@ namespace HIddenScreenshot
 
         private void MakeAndSendScreenshot()
         {
-            var path = Path.Combine(Path.GetTempPath(), Path.GetTempFileName() + ".png");
+            var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".png");
 
             var bmp = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
             using (var g = Graphics.FromImage(bmp))
             {
                 g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
-                bmp.Save(path);  // saves the image
+                bmp.Save(path);
             }
 
             // Send
             Task.Run(async () =>
             {
+                var client = new SmtpClient();
+                await client.ConnectAsync(_config.SmtpHost, _config.SmtpPort);
+                await client.AuthenticateAsync(_config.UserName, _config.Password);
 
+                var message = new MimeMessage();
+                message.From.Add(MailboxAddress.Parse(_config.UserName));
+                message.To.Add(MailboxAddress.Parse(_config.ToEmail));
+                message.Subject = "New hidden screenshot";
+
+                var builder = new BodyBuilder { TextBody = @"Here is new hidden screenshot" };
+                builder.Attachments.Add(path);
+
+                message.Body = builder.ToMessageBody();
+
+                await client.SendAsync(message);
             });
         }
     }
