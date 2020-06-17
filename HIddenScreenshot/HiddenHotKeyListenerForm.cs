@@ -12,6 +12,8 @@ namespace HIddenScreenshot
 {
     public partial class HiddenHotKeyListenerForm : Form
     {
+        private const string LogFile = "log.txt";
+
         private readonly Config _config;
 
         private enum Hotkeys
@@ -32,7 +34,15 @@ namespace HIddenScreenshot
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vlc);
 
-
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                var cp = base.CreateParams;
+                cp.ExStyle |= 0x80;
+                return cp;
+            }
+        }
 
         public HiddenHotKeyListenerForm()
         {
@@ -53,6 +63,8 @@ namespace HIddenScreenshot
                 MessageBox.Show("Sorry unable to start. Exiting...");
                 Environment.Exit(1);
             }
+
+            File.AppendAllText(LogFile, "Successfully started\n");
         }
 
         private Config GetConfig()
@@ -62,8 +74,9 @@ namespace HIddenScreenshot
                 var config = File.ReadAllText("appconfig.json");
                 return JsonSerializer.Deserialize<Config>(config);
             }
-            catch
+            catch (Exception e)
             {
+                File.AppendAllText(LogFile, e + "\n");
                 return null;
             }
         }
@@ -136,22 +149,31 @@ namespace HIddenScreenshot
             // Send
             Task.Run(async () =>
             {
-                var client = new SmtpClient();
-                client.AuthenticationMechanisms.Remove("XOAUTH2");
-                await client.ConnectAsync(_config.SmtpHost, _config.SmtpPort);
-                await client.AuthenticateAsync(_config.UserName, _config.Password);
+                try
+                {
+                    var client = new SmtpClient();
+                    client.AuthenticationMechanisms.Remove("XOAUTH2");
+                    await client.ConnectAsync(_config.SmtpHost, _config.SmtpPort);
+                    await client.AuthenticateAsync(_config.UserName, _config.Password);
 
-                var message = new MimeMessage();
-                message.From.Add(MailboxAddress.Parse(_config.UserName));
-                message.To.Add(MailboxAddress.Parse(_config.ToEmail));
-                message.Subject = "New hidden screenshot";
+                    var message = new MimeMessage();
+                    message.From.Add(MailboxAddress.Parse(_config.UserName));
+                    message.To.Add(MailboxAddress.Parse(_config.ToEmail));
+                    message.Subject = "New hidden screenshot";
 
-                var builder = new BodyBuilder { TextBody = @"Here is new hidden screenshot" };
-                builder.Attachments.Add(path);
+                    var builder = new BodyBuilder { TextBody = @"Here is new hidden screenshot" };
+                    builder.Attachments.Add(path);
 
-                message.Body = builder.ToMessageBody();
+                    message.Body = builder.ToMessageBody();
 
-                await client.SendAsync(message);
+                    await client.SendAsync(message);
+
+                    await File.AppendAllTextAsync(LogFile, $"Email Sent to {_config.ToEmail}\n");
+                }
+                catch (Exception e)
+                {
+                    await File.AppendAllTextAsync(LogFile, e + "\n");
+                }
             });
         }
     }
